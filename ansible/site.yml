@@ -1,0 +1,92 @@
+---
+- name: Install Apache web-server Tomcat10 using ansible
+  hosts: web-server
+  vars:
+    download_url: https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.10/bin/apache-tomcat-10.1.10.tar.gz
+  tasks:
+#Step 1: Create a Tomcat User
+    - name: Create a Tomcat User
+      user:
+        name: tomcat
+
+
+#Step 2: Create a Tomcat group
+
+    - name: Create a Tomcat Group
+      group:
+        name: tomcat
+#Step 3: Install OpenJDK
+
+    - name: Install JAVA
+      yum:
+        name: java
+        state: present
+
+
+    - name: Create a Tomcat Directory
+      file:
+        path: /opt/tomcat10
+        owner: tomcat
+        group: tomcat
+        mode: 755
+        recurse: yes
+
+ #Step 3: Install Tomcat using download_url
+    - name: download & unarchive tomcat10
+      unarchive:
+        src: "{{download_url}}"
+        dest: /opt/tomcat10
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Change ownership of tomcat directory
+      file:
+        path: /opt/tomcat10
+        owner: tomcat
+        group: tomcat
+        mode: "u+rwx,g+rx,o=rx"
+        recurse: yes
+        state: directory
+
+
+#Step 4: Create a Unit File
+# to run Tomcat as a service instead of using shell scripts
+# This requires a systemd unit file in the /etc/systemd/system/ directory:
+
+- name: Creating a service file
+      become: yes
+      copy:
+       content: |-
+         [Unit]
+         Description=Tomcat Service
+         Requires=network.target
+         After=network.target
+         [Service]
+         Type=forking
+         User=tomcat
+         Environment="CATALINA_PID=/opt/tomcat8/logs/tomcat.pid"
+         Environment="CATALINA_BASE=/opt/tomcat8"
+         Environment="CATALINA_HOME=/opt/tomcat8"
+         Environment="CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC"
+         ExecStart=/opt/tomcat8/bin/startup.sh
+         ExecStop=/opt/tomcat8/bin/shutdown.sh
+         Restart=on-abnormal
+         [Install]
+         WantedBy=multi-user.target
+       dest: /etc/systemd/system/tomcat.service
+
+
+#Then reload systemctl to ensure that the new changes are acknowledged by the system:
+    - name: Reload the SystemD to re-read configurations
+      become: yes
+      systemd:
+        daemon-reload: yes
+
+#Now start the Tomcat service:
+    - name: Enable the tomcat service and start
+      become: yes
+      systemd:
+        name: tomcat
+        enabled: yes
+                                                                                                                                    79,5          83%
+
