@@ -35,6 +35,7 @@ A Step by Step Guide to Installing Apache Tomca
 
 check ansible-playbook syntax
 ```
+cd ansible
 ansible-playbook --private-key aws_keys_pairs.pem site.yml --syntax-check
 ```
 Run Ansible PLAYBOOK
